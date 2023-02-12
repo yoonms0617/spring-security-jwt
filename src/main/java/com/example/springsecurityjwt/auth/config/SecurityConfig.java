@@ -1,6 +1,7 @@
 package com.example.springsecurityjwt.auth.config;
 
 import com.example.springsecurityjwt.auth.filter.JsonUsernamePasswordAuthenticationFilter;
+import com.example.springsecurityjwt.auth.filter.JwtFilter;
 import com.example.springsecurityjwt.auth.handler.LoginFailureHandler;
 import com.example.springsecurityjwt.auth.handler.LoginSuccessHandler;
 import com.example.springsecurityjwt.auth.support.JwtProvider;
@@ -14,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
@@ -29,6 +31,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(securedEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -54,8 +57,10 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .addFilterBefore(jsonUsernamePasswordAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtFilter(), JsonUsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/member/signup").permitAll()
+                        .requestMatchers("/member/profile").hasRole("MEMBER")
                         .anyRequest().authenticated()
                 );
         return http.build();
@@ -93,6 +98,11 @@ public class SecurityConfig {
         filter.setAuthenticationFailureHandler(loginFailureHandler());
         filter.setAllowSessionCreation(false);
         return filter;
+    }
+
+    @Bean
+    public JwtFilter jwtFilter() {
+        return new JwtFilter(jwtProvider);
     }
 
 }
