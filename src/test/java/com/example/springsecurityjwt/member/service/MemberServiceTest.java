@@ -53,7 +53,7 @@ class MemberServiceTest {
         memberService.signup(request);
 
         assertThat(member.getName()).isEqualTo(request.getName());
-        assertThat(member.getEmail()).isEqualTo(request.getEamil());
+        assertThat(member.getEmail()).isEqualTo(request.getEmail());
         assertThat(member.getPassword()).startsWith(PASSWORD_ENCRYPTION_ALGORITHM);
         then(memberRepository).should().existsByEmail(any());
         then(passwordEncoder).should().encode(any());
@@ -78,7 +78,7 @@ class MemberServiceTest {
         String encoded = encryptionPassword(request.getPassword());
         return Member.builder()
                 .name(request.getName())
-                .email(request.getEamil())
+                .email(request.getEmail())
                 .password(encoded)
                 .build();
     }

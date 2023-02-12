@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
 
     INVALID_INPUT_VALUE("C000", HttpStatus.BAD_REQUEST.value(), "입력 값이 잘못 되었습니다."),
+    WRONG_EMAIL_PASSWORD("C001", HttpStatus.BAD_REQUEST.value(), "이메일 또는 비밀번호를 확인해 주세요."),
+    METHOD_NOT_SUPPORTED("C002", HttpStatus.METHOD_NOT_ALLOWED.value(), "지원하지 않는 HTTP 메소드입니다."),
 
     DUPLICATE_EMAIL("M000", HttpStatus.CONFLICT.value(), "사용 중인 이메일입니다.");
 

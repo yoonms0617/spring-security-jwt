@@ -22,11 +22,11 @@ public class MemberService {
 
     @Transactional
     public void signup(SignupRequest request) {
-        validateEmail(request.getEamil());
+        validateEmail(request.getEmail());
         String encoded = encryptionPassword(request.getPassword());
         Member member = Member.builder()
                 .name(request.getName())
-                .email(request.getEamil())
+                .email(request.getEmail())
                 .password(encoded)
                 .build();
         memberRepository.save(member);
