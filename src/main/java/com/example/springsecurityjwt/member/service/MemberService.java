@@ -2,8 +2,10 @@ package com.example.springsecurityjwt.member.service;
 
 import com.example.springsecurityjwt.common.error.dto.ErrorCode;
 import com.example.springsecurityjwt.member.domain.Member;
+import com.example.springsecurityjwt.member.dto.ProfileResponse;
 import com.example.springsecurityjwt.member.dto.SignupRequest;
 import com.example.springsecurityjwt.member.exception.DuplicateEmailException;
+import com.example.springsecurityjwt.member.exception.NotFoundMemberException;
 import com.example.springsecurityjwt.member.repository.MemberRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,13 @@ public class MemberService {
                 .password(encoded)
                 .build();
         memberRepository.save(member);
+    }
+
+    @Transactional(readOnly = true)
+    public ProfileResponse profile(String email) {
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundMemberException(ErrorCode.NOT_FOUND_MEMBER));
+        return new ProfileResponse(member);
     }
 
     private void validateEmail(String email) {
