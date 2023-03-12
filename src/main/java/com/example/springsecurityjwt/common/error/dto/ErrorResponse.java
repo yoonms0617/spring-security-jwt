@@ -1,27 +1,34 @@
 package com.example.springsecurityjwt.common.error.dto;
 
-import lombok.AccessLevel;
+import com.example.springsecurityjwt.common.error.exception.ErrorType;
+
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ErrorResponse {
 
-    private String code;
+    private final LocalDateTime timeStamp;
 
-    private int status;
+    private final String code;
 
-    private String message;
+    private final int status;
 
-    private ErrorResponse(ErrorCode errorCode) {
-        this.code = errorCode.getCode();
-        this.status = errorCode.getStatus();
-        this.message = errorCode.getMessage();
+    private final String message;
+
+    private final String path;
+
+    private ErrorResponse(ErrorType errorType, String path) {
+        this.timeStamp = LocalDateTime.now();
+        this.code = errorType.getCode();
+        this.status = errorType.getStatus();
+        this.message = errorType.getMesage();
+        this.path = path;
     }
 
-    public static ErrorResponse of(ErrorCode errorCode) {
-        return new ErrorResponse(errorCode);
+    public static ErrorResponse of(ErrorType errorType, String path) {
+        return new ErrorResponse(errorType, path);
     }
 
 }

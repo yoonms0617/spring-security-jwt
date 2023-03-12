@@ -1,35 +1,37 @@
 package com.example.springsecurityjwt.auth.config;
 
-import com.example.springsecurityjwt.auth.filter.JsonUsernamePasswordAuthenticationFilter;
-import com.example.springsecurityjwt.auth.filter.JwtFilter;
+import com.example.springsecurityjwt.auth.filter.JsonUsernameAuthenticationFilter;
+import com.example.springsecurityjwt.auth.filter.JwtAuthenticationFilter;
 import com.example.springsecurityjwt.auth.handler.LoginFailureHandler;
 import com.example.springsecurityjwt.auth.handler.LoginSuccessHandler;
-import com.example.springsecurityjwt.auth.support.JwtProvider;
+import com.example.springsecurityjwt.auth.service.JwtService;
 
+import com.example.springsecurityjwt.auth.service.TokenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-@Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(securedEnabled = true)
 @RequiredArgsConstructor
@@ -37,43 +39,38 @@ public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
 
-    private final JwtProvider jwtProvider;
+    private final TokenService tokenService;
+
+    private final JwtService jwtService;
 
     private final ObjectMapper objectMapper;
 
     @Bean
-    public WebSecurityCustomizer webSecurityCustomizer() {
-        // H2 Console
-        return web -> web.ignoring().requestMatchers(new AntPathRequestMatcher("/h2-console/**"));
-    }
-
-    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .formLogin().disable()
-                .httpBasic().disable()
                 .csrf().disable()
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .addFilterBefore(jsonUsernamePasswordAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtFilter(), JsonUsernamePasswordAuthenticationFilter.class)
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/member/signup").permitAll()
-                        .requestMatchers("/member/profile").hasRole("MEMBER")
-                        .anyRequest().authenticated()
-                );
+                .httpBasic().disable()
+                .formLogin().disable();
+        http.sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        );
+        http.exceptionHandling(exception -> exception
+                .accessDeniedHandler(accessDeniedHandler())
+                .authenticationEntryPoint(authenticationEntryPoint())
+        );
+        http.addFilterBefore(jsonUsernameAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtAuthenticationFilter(), JsonUsernameAuthenticationFilter.class);
+        http.authorizeHttpRequests(req -> req
+                .antMatchers("/api/member/signup", "/api/auth/token/refresh").permitAll()
+                .antMatchers("/api/member/profile", "/api/member/profile/update").hasRole("MEMBER")
+                .anyRequest().authenticated()
+        );
         return http.build();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
-    }
-
-    @Bean
     public AuthenticationSuccessHandler loginSuccessHandler() {
-        return new LoginSuccessHandler(jwtProvider, objectMapper);
+        return new LoginSuccessHandler(jwtService, tokenService, objectMapper);
     }
 
     @Bean
@@ -82,17 +79,23 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
-        // provider.setHideUserNotFoundExceptions(false);
-        return new ProviderManager(provider);
+    public AccessDeniedHandler accessDeniedHandler() {
+        return new com.example.springsecurityjwt.auth.handler.AccessDeniedHandler(objectMapper);
     }
 
     @Bean
-    public JsonUsernamePasswordAuthenticationFilter jsonUsernamePasswordAuthenticationFilter() {
-        JsonUsernamePasswordAuthenticationFilter filter = new JsonUsernamePasswordAuthenticationFilter(objectMapper);
+    public AuthenticationEntryPoint authenticationEntryPoint() {
+        return new com.example.springsecurityjwt.auth.filter.AuthenticationEntryPoint(objectMapper);
+    }
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtService, authenticationEntryPoint());
+    }
+
+    @Bean
+    public JsonUsernameAuthenticationFilter jsonUsernameAuthenticationFilter() {
+        JsonUsernameAuthenticationFilter filter = new JsonUsernameAuthenticationFilter(objectMapper);
         filter.setAuthenticationManager(authenticationManager());
         filter.setAuthenticationSuccessHandler(loginSuccessHandler());
         filter.setAuthenticationFailureHandler(loginFailureHandler());
@@ -101,8 +104,25 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtFilter jwtFilter() {
-        return new JwtFilter(jwtProvider);
+    public AuthenticationManager authenticationManager() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        provider.setMessageSource(messageSource());
+        return new ProviderManager(provider);
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+    @Bean
+    public MessageSource messageSource() {
+        ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
+        messageSource.setDefaultEncoding("UTF-8");
+        messageSource.setBasenames("classpath:security/message", "classpath:org/springframework/security/messages");
+        return messageSource;
     }
 
 }

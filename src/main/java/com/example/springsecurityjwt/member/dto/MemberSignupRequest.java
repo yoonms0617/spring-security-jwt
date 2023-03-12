@@ -1,15 +1,11 @@
 package com.example.springsecurityjwt.member.dto;
 
-import jakarta.validation.constraints.NotBlank;
-
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotBlank;
 
 @Getter
-@AllArgsConstructor
-@NoArgsConstructor
-public class SignupRequest {
+public class MemberSignupRequest {
 
     @NotBlank
     private String name;

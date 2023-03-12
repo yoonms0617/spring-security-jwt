@@ -1,9 +1,10 @@
 package com.example.springsecurityjwt.member.service;
 
-import com.example.springsecurityjwt.common.error.dto.ErrorCode;
+import com.example.springsecurityjwt.common.error.exception.ErrorType;
 import com.example.springsecurityjwt.member.domain.Member;
-import com.example.springsecurityjwt.member.dto.ProfileResponse;
-import com.example.springsecurityjwt.member.dto.SignupRequest;
+import com.example.springsecurityjwt.member.dto.MemberProfileResponse;
+import com.example.springsecurityjwt.member.dto.MemberProfileUpdateRequest;
+import com.example.springsecurityjwt.member.dto.MemberSignupRequest;
 import com.example.springsecurityjwt.member.exception.DuplicateEmailException;
 import com.example.springsecurityjwt.member.exception.NotFoundMemberException;
 import com.example.springsecurityjwt.member.repository.MemberRepository;
@@ -23,9 +24,11 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public void signup(SignupRequest request) {
-        validateEmail(request.getEmail());
-        String encoded = encryptionPassword(request.getPassword());
+    public void signup(MemberSignupRequest request) {
+        if (memberRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateEmailException(ErrorType.DUPLICATE_EMAIL);
+        }
+        String encoded = passwordEncoder.encode(request.getPassword());
         Member member = Member.builder()
                 .name(request.getName())
                 .email(request.getEmail())
@@ -35,20 +38,18 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public ProfileResponse profile(String email) {
+    public MemberProfileResponse profile(String email) {
         Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundMemberException(ErrorCode.NOT_FOUND_MEMBER));
-        return new ProfileResponse(member);
+                .orElseThrow(() -> new NotFoundMemberException(ErrorType.NOT_FOUND_MEMBER));
+        return new MemberProfileResponse(member.getName(), member.getEmail());
     }
 
-    private void validateEmail(String email) {
-        if (memberRepository.existsByEmail(email)) {
-            throw new DuplicateEmailException(ErrorCode.DUPLICATE_EMAIL);
-        }
-    }
-
-    private String encryptionPassword(String rawPassword) {
-        return passwordEncoder.encode(rawPassword);
+    @Transactional
+    public MemberProfileResponse updateProfile(String email, MemberProfileUpdateRequest request) {
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundMemberException(ErrorType.NOT_FOUND_MEMBER));
+        member.updateName(request.getName());
+        return new MemberProfileResponse(member.getName(), member.getEmail());
     }
 
 }

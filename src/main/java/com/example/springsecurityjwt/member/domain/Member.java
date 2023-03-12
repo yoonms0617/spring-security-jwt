@@ -2,24 +2,26 @@ package com.example.springsecurityjwt.member.domain;
 
 import com.example.springsecurityjwt.common.domain.BaseEntity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
-@Table(name = "MEMBER")
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
 @Entity
+@Table(name = "MEMBER")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
+@ToString
 public class Member extends BaseEntity {
 
     @Id
@@ -45,6 +47,10 @@ public class Member extends BaseEntity {
         this.email = email;
         this.password = password;
         this.role = Role.MEMBER;
+    }
+
+    public void updateName(String name) {
+        this.name = name;
     }
 
 }

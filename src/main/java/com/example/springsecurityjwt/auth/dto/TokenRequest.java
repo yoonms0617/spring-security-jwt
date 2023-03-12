@@ -3,10 +3,8 @@ package com.example.springsecurityjwt.auth.dto;
 import lombok.Getter;
 
 @Getter
-public class LoginRequest {
+public class TokenRequest {
 
-    private String email;
-
-    private String password;
+    private String refreshToken;
 
 }

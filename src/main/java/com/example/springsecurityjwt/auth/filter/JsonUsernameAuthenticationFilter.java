@@ -1,12 +1,11 @@
 package com.example.springsecurityjwt.auth.filter;
 
 import com.example.springsecurityjwt.auth.dto.LoginRequest;
-import com.example.springsecurityjwt.common.error.dto.ErrorCode;
+import com.example.springsecurityjwt.common.error.exception.ErrorType;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,31 +14,38 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.util.StreamUtils;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 
 import java.nio.charset.StandardCharsets;
 
-public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
+@Slf4j
+public class JsonUsernameAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
 
-    private static final String DEFAULT_FILTER_PROCESSES_URL = "/member/login";
+    private static final String DEFAULT_FILTER_PROCESSES_URL = "/api/member/login";
 
     private final ObjectMapper objectMapper;
 
-    public JsonUsernamePasswordAuthenticationFilter(ObjectMapper objectMapper) {
+    public JsonUsernameAuthenticationFilter(ObjectMapper objectMapper) {
         super(DEFAULT_FILTER_PROCESSES_URL);
         this.objectMapper = objectMapper;
     }
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
-            throws AuthenticationException, IOException {
+            throws AuthenticationException, IOException, ServletException {
+        log.info("JsonUsernameAuthenticationFilter RUN");
         if (!request.getMethod().equals("POST")) {
-            throw new AuthenticationServiceException(ErrorCode.METHOD_NOT_SUPPORTED.getMessage());
+            throw new AuthenticationServiceException(ErrorType.METHOD_NOT_SUPPORTED.getCode());
         }
         LoginRequest loginRequest = parseLoginRequest(request);
         String email = loginRequest.getEmail();
         String password = loginRequest.getPassword();
-        UsernamePasswordAuthenticationToken authRequest = UsernamePasswordAuthenticationToken.unauthenticated(email, password);
+        UsernamePasswordAuthenticationToken authRequest =
+                UsernamePasswordAuthenticationToken.unauthenticated(email, password);
         setDetails(request, authRequest);
         return this.getAuthenticationManager().authenticate(authRequest);
     }
